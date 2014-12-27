@@ -54,6 +54,8 @@ app.set('views',__dirname+'/views');
  * %%%%%%%%%%%%%%%%%%*/
 
 app.get('/', index.home);
+app.get('/room',room.gRoom);
+app.post('/room',room.pRoom);
 
 /*%%%%%%%%%%%%%%%%%%%%
  *
