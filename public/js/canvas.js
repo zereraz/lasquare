@@ -6,14 +6,15 @@ $(document).ready(function(){
     var dew = [];
     var otherPlayers = [];
     var roomId;
+    var dewX,dewY;
+
     function init(){
         canvas = document.getElementById('myCanvas');
         ctx = canvas.getContext('2d');
         var randomX = random(0,500);
         var randomY = random(0,500);
         me = new Square(randomX,randomY,35,35,"#e21",10);
-        me.draw();
-        generateMountainDew();
+        me.draw(); 
         socket = io();
     }
     
@@ -22,15 +23,28 @@ $(document).ready(function(){
     }
 
     function generateMountainDew(){
-        for(var i =0;i<2;i++){
-            var randomX = random(0,500); 
-            var randomY = random(0,500);
-            dew.push(new Square(randomX,randomY,10,10,"#6fe63a",0)); 
-            dew[i].draw();
+        console.log(userId);
+        if(userId==0){
+            for(var i =0;i<2;i++){
+                var randomX = random(0,500); 
+                var randomY = random(0,500);
+                dew.push(new Square(randomX,randomY,10,10,"#6fe63a",0)); 
+                dew[i].draw();
+                var temp = {};
+                temp.x = randomX;
+                temp.y = randomY;
+                temp.room = roomId;
+                socket.emit('mountainDewPos', temp);
+            }
+        }else{
+                console.log(dewX);
+                for(var i =0;i<2;i++){
+                    dew.push(new Square(dewX,dewY,10,10,"#6fe63a",0)); 
+                    dew[i].draw();
+            }
         }
     }
-    
-        
+            
     function Square(x,y,width,height,color,velocity){
         this.x = x;
         this.y = y;
@@ -52,6 +66,10 @@ $(document).ready(function(){
                 dew[i].erase();
                 dew.splice(i,1);
                 this.velocity+=10;
+                var temp = {};
+                temp.uid = userId;
+                temp.room = roomId;
+                socket.emit('mountainDew',temp);
             }
         }
     }
@@ -60,6 +78,7 @@ $(document).ready(function(){
     Square.prototype.erase = function(){
         ctx.clearRect(this.x,this.y,this.width,this.height);
     } 
+
     Square.prototype.moveUp = function(){
         if(this.y>0){
             this.collisionDetection();
@@ -73,6 +92,7 @@ $(document).ready(function(){
         } 
         this.isMoving = false; 
     }
+
     Square.prototype.moveLeft = function(){
         if(this.x>0){
             this.collisionDetection();
@@ -87,6 +107,7 @@ $(document).ready(function(){
         } 
         this.isMoving = false; 
     }
+
     Square.prototype.moveRight = function(){
         if(this.x+this.width<500){
             this.collisionDetection();
@@ -101,6 +122,7 @@ $(document).ready(function(){
         }
         this.isMoving = false; 
     }
+
     Square.prototype.moveDown = function(){
         if(this.y+this.height<500){
             this.collisionDetection();
@@ -187,11 +209,23 @@ $(document).ready(function(){
         userId = id;
         me.uid = userId;
         me.room = roomId; 
+        generateMountainDew();
         socket.emit('join',me);
     });  
 
     socket.on('myRoom', function(myRoom){
         roomId = myRoom;
         me.room = roomId;
+    });
+
+    socket.on('mountainDewPos', function(data){
+        dewX = data.x;
+        dewY = data.y;
+    });
+
+    socket.on('mountainDew', function(data){
+        console.log(data.uid);
+        console.log(otherPlayers);
+        otherPlayers[data.uid].velocity+=10;
     });
 });
