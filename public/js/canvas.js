@@ -1,5 +1,6 @@
 $(document).ready(function(){
-    
+    //socket object
+    var socket; 
     var canvas,ctx,me; 
     var dew = [];
     function init(){
@@ -8,6 +9,7 @@ $(document).ready(function(){
         me = new Square(10,10,35,35,"#123",10); 
         me.draw();
         generateMountainDew();
+        socket = io();
     }
     
     function random(low,high){
@@ -22,20 +24,8 @@ $(document).ready(function(){
             dew[i].draw();
         }
     }
-
-    Square.prototype.limit = function(){
-        /*
-         * to fix
-        if(this.x-this.velocity<0 || this.x+this.width+this.velocity>=500){
-            return false;
-        }
-        if(this.y<0 || this.y+this.height>500){
-            return false;
-        }
-       */
-      
-        return true;
-    }
+    
+        
     function Square(x,y,width,height,color,velocity){
         this.x = x;
         this.y = y;
@@ -49,8 +39,24 @@ $(document).ready(function(){
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x,this.y,this.width,this.height);
     }
+    
+    Square.prototype.collisionDetection = function(){
+        for(var i=0;i<dew.length;i++){
+            if(dew[i].x<this.x+this.width && dew[i].x+dew[i].width > this.x && dew[i].y<this.y+this.height && dew[i].y+dew[i].height>this.y){
+                dew[i].erase();
+                dew.splice(i,1);
+                this.velocity+=10;
+            }
+        }
+    }
+      
+     
+    Square.prototype.erase = function(){
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+    } 
     Square.prototype.moveUp = function(){
-        if(this.limit()){
+        if(this.y>0){
+            this.collisionDetection();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y-this.velocity;
@@ -58,7 +64,8 @@ $(document).ready(function(){
         } 
     }
     Square.prototype.moveLeft = function(){
-        if(this.limit()){
+        if(this.x>0){
+            this.collisionDetection();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x-this.velocity;
@@ -66,7 +73,8 @@ $(document).ready(function(){
         } 
     }
     Square.prototype.moveRight = function(){
-        if(this.limit()){
+        if(this.x+this.width<500){
+            this.collisionDetection();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x+this.velocity;
@@ -74,7 +82,8 @@ $(document).ready(function(){
         }
     }
     Square.prototype.moveDown = function(){
-        if(this.limit()){
+        if(this.y+this.height<500){
+            this.collisionDetection();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y+this.velocity;
