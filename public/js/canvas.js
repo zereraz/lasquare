@@ -2,11 +2,16 @@ $(document).ready(function(){
     //socket object
     var socket; 
     var canvas,ctx,me; 
+    var userId;
     var dew = [];
+    var otherPlayers = [];
+    var roomId;
     function init(){
         canvas = document.getElementById('myCanvas');
         ctx = canvas.getContext('2d');
-        me = new Square(10,10,35,35,"#123",10); 
+        var randomX = random(0,500);
+        var randomY = random(0,500);
+        me = new Square(randomX,randomY,35,35,"#e21",10);
         me.draw();
         generateMountainDew();
         socket = io();
@@ -33,6 +38,7 @@ $(document).ready(function(){
         this.height = height;
         this.velocity = velocity;
         this.color = color;
+        this.isMoving = false;
         return this;
     } 
      Square.prototype.draw = function(){
@@ -61,7 +67,11 @@ $(document).ready(function(){
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y-this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
+            var toSend = this;
+            toSend.dir = "up";
+            socket.emit('move',toSend);
         } 
+        this.isMoving = false; 
     }
     Square.prototype.moveLeft = function(){
         if(this.x>0){
@@ -70,7 +80,12 @@ $(document).ready(function(){
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x-this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
+            var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "left";
+            socket.emit('move',toSend);
         } 
+        this.isMoving = false; 
     }
     Square.prototype.moveRight = function(){
         if(this.x+this.width<500){
@@ -79,7 +94,12 @@ $(document).ready(function(){
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x+this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
+            var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "right";
+            socket.emit('move',toSend);
         }
+        this.isMoving = false; 
     }
     Square.prototype.moveDown = function(){
         if(this.y+this.height<500){
@@ -88,7 +108,12 @@ $(document).ready(function(){
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y+this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
-        } 
+            var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "down";
+            socket.emit('move',toSend);
+        }
+        this.isMoving = false; 
     }
 
      init();
@@ -103,25 +128,70 @@ $(document).ready(function(){
 
         // w
         if(e.which == 119|| e.keyCode == 119){
-            me.moveUp(); 
+            me.moveUp();
+            me.isMoving = true;
         }
 
         //a
         if(e.which == 97|| e.keyCode == 97){
 
             me.moveLeft(); 
+            me.isMoving = true;
         }
 
         // s
         if(e.which == 115|| e.keyCode == 115){
  
             me.moveDown(); 
+            me.isMoving = true;
         }
 
         // d
         if(e.which == 100 || e.keyCode == 100){
             
             me.moveRight(); 
+            me.isMoving = true;
         }
+    });
+
+    function moveThat(userId, direction){
+        switch(direction){
+            case "up":
+                otherPlayers[userId-1].moveUp();
+                break;
+            case "down":
+                otherPlayers[userId-1].moveDown();
+                break;
+            case "left":
+                otherPlayers[userId-1].moveLeft();
+                break;
+            case "right":
+                otherPlayers[userId-1].moveRight();
+                break;
+        }
+    }
+
+    socket.on('move',function(data){
+        var uid = data.uid;
+        var dir = data.dir;
+        moveThat(uid,dir);
+    });
+
+    socket.on('join', function(data){
+        var temp = new Square(data.x,data.y,data.width,data.height,data.color,data.velocity);
+        temp.draw(); 
+        otherPlayers.push(temp);        
+    });
+
+    socket.on('myId', function(id){
+        userId = id;
+        me.uid = userId;
+        me.room = roomId; 
+        socket.emit('join',me);
+    });  
+
+    socket.on('myRoom', function(myRoom){
+        roomId = myRoom;
+        me.room = roomId;
     });
 });

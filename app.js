@@ -11,6 +11,8 @@ var port = process.env.PORT || 3000;
 var http = require('http').Server(app);
 var io = require('socket.io')(http,{transport:['websocket','polling']});
 
+var roomLord = {};
+
 /*%%%%%%%%%%%%%%%%%%%%
 *
 *   Middleware & Routes
@@ -56,6 +58,42 @@ app.set('views',__dirname+'/views');
 app.get('/', index.home);
 app.get('/room',room.gRoom);
 app.post('/room',room.pRoom);
+
+/*%%%%%%%%%%%%%%%%%%%%
+ *
+ * Socket events 
+ *
+ * %%%%%%%%%%%%%%%%%%*/
+
+io.on('connection', function(socket){
+    myRoom = room.getRoom();
+    activeConnections ++ ;
+    if(myRoom!=0){
+        userName = room.getUser();
+        if(roomLord[myRoom]==undefined){
+            roomLord[myRoom] = 0;
+        }else{
+            roomLord[myRoom] += 1;
+        }
+        socket.join(myRoom);
+        io.sockets.to(myRoom).emit('myRoom',myRoom);
+        io.sockets.to(myRoom).emit('myId',roomLord[myRoom]); 
+        
+        socket.on('move',function(data){
+            socket.broadcast.to(data.room).emit('move',data); 
+        });
+
+        socket.on('join',function(user){
+            socket.broadcast.to(user.room).emit('join', user); 
+        });
+
+
+    }
+    io.sockets.on('disconnect', function(){
+        activeConnections--;
+    });
+});
+
 
 /*%%%%%%%%%%%%%%%%%%%%
  *
