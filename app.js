@@ -12,7 +12,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http,{transport:['websocket','polling']});
 
 var roomLord = {};
-
+var dew = {};
 /*%%%%%%%%%%%%%%%%%%%%
 *
 *   Middleware & Routes
@@ -88,13 +88,17 @@ io.on('connection', function(socket){
             socket.broadcast.to(data.room).emit('move',data); 
         });
         socket.on('mountainDewPos',function(data){
+            dew.x = data.x;
+            dew.y = data.y;            
             socket.broadcast.to(data.room).emit('mountainDewPos',data); 
         });
         socket.on('mountainDew',function(data){
             socket.broadcast.to(data.room).emit('mountainDew',data); 
         });
         socket.on('join',function(user){
+            console.log(roomLord);
             socket.broadcast.to(user.room).emit('join', user); 
+            socket.broadcast.to(user.room).emit('mountainDewPos',dew);
         });
 
 

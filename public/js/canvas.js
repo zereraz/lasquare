@@ -6,7 +6,8 @@ $(document).ready(function(){
     var dew = [];
     var otherPlayers = [];
     var roomId;
-    var dewX,dewY;
+    var dewX = [];
+    var dewY = [];
 
     function init(){
         canvas = document.getElementById('myCanvas');
@@ -23,27 +24,27 @@ $(document).ready(function(){
     }
 
     function generateMountainDew(){
-        console.log(userId);
+        var temp = {};
+        temp.x = [];
+        temp.y = [];
         if(userId==0){
             for(var i =0;i<2;i++){
                 var randomX = random(0,500); 
                 var randomY = random(0,500);
                 dew.push(new Square(randomX,randomY,10,10,"#6fe63a",0)); 
                 dew[i].draw();
-                var temp = {};
-                temp.x = randomX;
-                temp.y = randomY;
+                temp.x[i] = randomX;
+                temp.y[i] = randomY;
                 temp.room = roomId;
                 socket.emit('mountainDewPos', temp);
             }
-        }else{
-                console.log(dewX);
+        }else{ 
                 for(var i =0;i<2;i++){
-                    dew.push(new Square(dewX,dewY,10,10,"#6fe63a",0)); 
+                    dew.push(new Square(dewX[i],dewY[i],10,10,"#6fe63a",0)); 
                     dew[i].draw();
             }
         }
-    }
+   }
             
     function Square(x,y,width,height,color,velocity){
         this.x = x;
@@ -65,7 +66,7 @@ $(document).ready(function(){
             if(dew[i].x<this.x+this.width && dew[i].x+dew[i].width > this.x && dew[i].y<this.y+this.height && dew[i].y+dew[i].height>this.y){
                 dew[i].erase();
                 dew.splice(i,1);
-                this.velocity+=10;
+                this.velocity += 10;
                 var temp = {};
                 temp.uid = userId;
                 temp.room = roomId;
@@ -145,11 +146,11 @@ $(document).ready(function(){
      //
     
      $(document).keypress(function(e){
-//        console.log(e.which);
+        console.log(e.which);
         //w a s d
 
-        // w
-        if(e.which == 119|| e.keyCode == 119){
+        // w or up arrow key
+        if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
             me.moveUp();
             me.isMoving = true;
         }
@@ -203,14 +204,17 @@ $(document).ready(function(){
         var temp = new Square(data.x,data.y,data.width,data.height,data.color,data.velocity);
         temp.draw(); 
         otherPlayers.push(temp);        
+        socket.emit('mountainDewPos', temp);
     });
 
     socket.on('myId', function(id){
         userId = id;
         me.uid = userId;
         me.room = roomId; 
-        generateMountainDew();
         socket.emit('join',me);
+        if(userId==0){
+            generateMountainDew();
+        }
     });  
 
     socket.on('myRoom', function(myRoom){
@@ -219,13 +223,18 @@ $(document).ready(function(){
     });
 
     socket.on('mountainDewPos', function(data){
-        dewX = data.x;
-        dewY = data.y;
+        for(var i = 0;i<2;i++){
+            dewX[i] = data.x[i];
+            dewY[i] = data.y[i]; 
+        }
+        if(userId!=0){
+            generateMountainDew();
+        }
     });
 
     socket.on('mountainDew', function(data){
-        console.log(data.uid);
-        console.log(otherPlayers);
-        otherPlayers[data.uid].velocity+=10;
+        if(dew.length != 1){
+            otherPlayers[data.uid-1].velocity+=10;
+        }
     });
 });
