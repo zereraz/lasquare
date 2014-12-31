@@ -1,9 +1,9 @@
-/*%%%%%%%%%%%%%%%%%%%%
-*
-* Dependencies & Global Variables
-*
-* 
-*%%%%%%%%%%%%%%%%%%%%*/
+/* %%%%%%%%%%%%%%%%%%%%
+ *
+ * Dependencies & Global Variables
+ *
+ * 
+ * %%%%%%%%%%%%%%%%%%%% */
 
 var express = require('express');
 var app = express();
@@ -13,12 +13,13 @@ var io = require('socket.io')(http,{transport:['websocket','polling']});
 
 var roomLord = {};
 var dew = {};
-/*%%%%%%%%%%%%%%%%%%%%
-*
-*   Middleware & Routes
-*
-* 
-*%%%%%%%%%%%%%%%%%%%%*/
+
+/* %%%%%%%%%%%%%%%%%%%%
+ *
+ *   Middleware & Routes
+ *
+ * 
+ * %%%%%%%%%%%%%%%%%%%% */
 
 var bodyParser = require('body-parser');
 var session = require('express-session');
@@ -49,30 +50,30 @@ app.set('view engine','jade');
 // views
 app.set('views',__dirname+'/views');
 
-/*%%%%%%%%%%%%%%%%%%%%
+/* %%%%%%%%%%%%%%%%%%%%
  *
  * Routes 
  *
- * %%%%%%%%%%%%%%%%%%*/
+ * %%%%%%%%%%%%%%%%%% */
 
 app.get('/', index.home);
 app.get('/room',room.gRoom);
 app.post('/room',room.pRoom);
 
-/*%%%%%%%%%%%%%%%%%%%%
+/* %%%%%%%%%%%%%%%%%%%%
  *
  * Socket events 
  *
- * %%%%%%%%%%%%%%%%%%*/
+ * %%%%%%%%%%%%%%%%%% */
 
 io.on('connection', function(socket){
     myRoom = room.getRoom();
     activeConnections +=1 ;
-    if(myRoom!=0){
+    if(myRoom!==0){
 
         userName = room.getUser();
 
-        if(roomLord[myRoom]==undefined){
+        if(roomLord[myRoom]===undefined){
             roomLord[myRoom] = 0;
         }else{
             roomLord[myRoom] += 1;
@@ -85,37 +86,43 @@ io.on('connection', function(socket){
         io.sockets.to(myRoom).emit('user',userName);        
 
         socket.on('move',function(data){
+            console.log('move '+data);
             socket.broadcast.to(data.room).emit('move',data); 
         });
         socket.on('mountainDewPos',function(data){
+            console.log('mountainDewPos '+data);
             dew.x = data.x;
             dew.y = data.y;            
             socket.broadcast.to(data.room).emit('mountainDewPos',data); 
         });
         socket.on('mountainDew',function(data){
+            console.log('mountainDew '+data);
             socket.broadcast.to(data.room).emit('mountainDew',data); 
         });
         socket.on('join',function(user){
-            console.log(roomLord);
+            console.log('join '+user);
             socket.broadcast.to(user.room).emit('join', user); 
             socket.broadcast.to(user.room).emit('mountainDewPos',dew);
         });
-
-
+        socket.on('allPlayersSoFar' , function(data){
+            socket.broadcast.to(data.room).emit('allPlayersSoFar',data);
+        });
     }
     io.sockets.on('disconnect', function(){
         roomLord[myRoom]-=1;
         // to subtract for all users
+        console.log("User disconnected");
         activeConnections--;
+        console.log(activeConnections);
     });
 });
 
 
-/*%%%%%%%%%%%%%%%%%%%%
+/* %%%%%%%%%%%%%%%%%%%%
  *
  *  Listening on port 3000
  *
- * %%%%%%%%%%%%%%%%%%*/
+ * %%%%%%%%%%%%%%%%%% */
 
 http.listen(port, function(){
 
