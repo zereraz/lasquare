@@ -1,5 +1,6 @@
 $(document).ready(function(){
 
+/*
     //socket object
     var socket; 
     var canvas,ctx,me; 
@@ -309,4 +310,250 @@ $(document).ready(function(){
             otherPlayers[i].draw();
         }        
     });
+
+*/
+
+
+var canvas,ctx;
+var me;
+var score,sctx;
+var info,ictx;
+
+function init (){
+
+    canvas = document.getElementById('myCanvas');
+    ctx = canvas.getContext('2d');
+    score = document.getElementById('myScore');
+    sctx = score.getContext('2d');
+    info = document.getElementById('myInfo');
+    ictx = info.getContext('2d');
+    var color = randomColor();
+    me = new Player(random(10,440), random(10,440), 40, 40,color);
+    me.draw();
+    drawBorder();
+    setScore(0);
+    getStatus();
+}
+
+function setScore(s){
+    sctx.clearRect(10,30,50,50);
+    sctx.fillStyle = randomColor();
+    sctx.font = "40px Georgia";
+    sctx.fillText(s,10,30,50,50);
+}
+
+function clearInfo(){
+    ictx.clearRect(0,0,info.width,info.height);
+}
+
+function infoText(s,y){
+    ictx.fillStyle = randomColor();
+    ictx.font = "18px Georgia";
+    ictx.fillText(s,10,y,70,70);
+}
+
+function getStatus(){
+    clearInfo();
+    infoText("alive : "+me.alive,30);
+    infoText("stuck : "+me.isStuck,60);
+    
+}
+
+function drawBorder(){ 
+
+    ctx.lineWidth   = 5;
+    ctx.strokeStyle = randomColor();
+    ctx.strokeRect(5,5,490,490);
+
+}
+
+function Player (x, y, width, height, color, name){ 
+ 
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.color = color;
+    this.velocity = 15;
+    this.alive = true;
+    this.isMoving = false;
+    this.name = name; 
+    this.isStuck = false;
+
+}
+
+function MountainDew (point,x,y,width,height,color){
+    
+    this.x = x;
+    this.y = y;
+    this.width = point * width;
+    this.height = point * height;
+    this.color = color;
+
+}
+
+Player.prototype.draw = function (){
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x,this.y,this.width,this.height);
+
+};
+
+function random (low, high){
+    
+    return Math.floor(Math.random() * (high - low) + low);
+
+}
+
+function randomColor (){
+
+    var color = "#";
+    var toSelectFrom = "0123456789ABCDEF";
+    for(var i = 0; i<6; i++){
+        var j = random(0,16); 
+        color += toSelectFrom[j];
+    }
+    return color;
+
+}
+
+$(document).keypress(function(e){
+    if(me.alive && !me.isStuck){
+      
+        // console.log(e.which);
+        
+        //w a s d
+
+        // w or up arrow key
+
+        if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
+            me.moveUp();
+            me.isMoving = true;
+        }
+
+        //a
+        if(e.which == 97|| e.keyCode == 97){
+
+            me.moveLeft(); 
+            me.isMoving = true;
+        }
+
+        // s
+        if(e.which == 115|| e.keyCode == 115){
+ 
+            me.moveDown(); 
+            me.isMoving = true;
+        }
+
+        // d
+        if(e.which == 100 || e.keyCode == 100){
+            
+            me.moveRight(); 
+            me.isMoving = true;
+        }
+    }else{
+        var tempFlag = true;
+        getStatus();
+        if(tempFlag){ 
+            setTimeout(function(){
+                me.isStuck = false;                    
+                getStatus();
+            },5000);
+            tempFlag = false;
+        }
+    }
+});
+ 
+Player.prototype.collisionDetection = function(b){
+
+    if(b.x < this.x + this.width && b.x + b.width > this.x && b.y < this.y + this.height && b.y + b.height > this.y){
+        alert('collision');
+    } 
+
+};
+
+Player.prototype.moveUp = function(){
+    if(!this.isStuck){
+        if(this.y>10){
+            //this.collisionDetection();
+            ctx.fillStyle = this.color;
+            ctx.clearRect(this.x,this.y,this.width,this.height);
+            this.y = this.y-this.velocity;
+            ctx.fillRect(this.x,this.y,this.width,this.height);
+   /*       var toSend = this;
+            toSend.dir = "up";
+            socket.emit('move',toSend);
+    */    }
+        else{
+                this.isStuck = true;
+        }
+    } 
+        this.isMoving = false; 
+};
+
+Player.prototype.moveLeft = function(){
+    if(!this.isStuck){
+        if(this.x>10){
+           // this.collisionDetection();
+            ctx.fillStyle = this.color;
+            ctx.clearRect(this.x,this.y,this.width,this.height);
+            this.x = this.x-this.velocity;
+            ctx.fillRect(this.x,this.y,this.width,this.height);
+/*          var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "left";
+            socket.emit('move',toSend);
+  */      }
+        else{
+                this.isStuck = true;
+        }
+    } 
+
+        this.isMoving = false; 
+};
+
+Player.prototype.moveRight = function(){
+    if(!this.isStuck){
+        if(this.x+this.width < 490){
+            //this.collisionDetection();
+            ctx.fillStyle = this.color;
+            ctx.clearRect(this.x,this.y,this.width,this.height);
+            this.x = this.x+this.velocity;
+            ctx.fillRect(this.x,this.y,this.width,this.height);
+   /*       var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "right";
+            socket.emit('move',toSend);
+ */       }
+        else{
+                this.isStuck = true;
+            }
+        } 
+
+        this.isMoving = false; 
+};
+
+Player.prototype.moveDown = function(){
+    if(!this.isStuck){
+        if(this.y+this.height < 490){
+            //this.collisionDetection();
+            ctx.fillStyle = this.color;
+            ctx.clearRect(this.x,this.y,this.width,this.height);
+            this.y = this.y+this.velocity;
+            ctx.fillRect(this.x,this.y,this.width,this.height);
+/*          var toSend = this;
+            toSend.uid = userId;
+            toSend.dir = "down";
+            socket.emit('move',toSend);
+*/        }
+        else{
+                this.isStuck = true;
+            } 
+        }
+
+        this.isMoving = false; 
+};
+
+init();
+
 });
