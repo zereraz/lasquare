@@ -1,20 +1,20 @@
 $(document).ready(function(){
 
-/*
-    //socket object
-    var socket; 
-    var canvas,ctx,me; 
-    var userId = -1;
-    var dew = [];
-    var otherPlayers = [];
-    var roomId;
-    var dewX = [];
-    var dewY = [];
-    var score = 0;
-    var scoreCanvas,scoreCtx;
-    var alive = true;
+        /*
+        //socket object
+        var socket; 
+        var canvas,ctx,me; 
+        var userId = -1;
+        var dew = [];
+        var otherPlayers = [];
+        var roomId;
+        var dewX = [];
+        var dewY = [];
+        var score = 0;
+        var scoreCanvas,scoreCtx;
+        var alive = true;
 
-    function init(){
+        function init(){
 
         scoreCanvas = document.getElementById('myScore');
         scoreCtx = scoreCanvas.getContext('2d');
@@ -27,185 +27,458 @@ $(document).ready(function(){
         me.draw(); 
         socket = io();
 
-    }
-    
-    function random(low,high){
+        }
+
+        function random(low,high){
 
         return Math.floor(Math.random()*(high-low)+low);
 
-    }
-    
-    function putScore(){
+        }
+
+        function putScore(){
 
         scoreCtx.clearRect(0,0,scoreCanvas.width,scoreCanvas.height);
         scoreCtx.fillStyle = "#e21";
         scoreCtx.font = "40px Georgia";
         scoreCtx.fillText(score,0,35);
 
-    }
+        }
 
-    function addToScore(s){
+        function addToScore(s){
 
         score += s;
         putScore();
-    }
+        }
 
-    function generateMountainDew(){
+        function generateMountainDew(){
 
         var temp = {};
         temp.x = [];
         temp.y = [];
         if(userId===0){
-            for(var i = 0;i<2;i++){
-                var randomX = random(0,500); 
-                var randomY = random(0,500);
-                dew.push(new Square(randomX,randomY,10,10,"#6fe63a",0)); 
-                dew[i].draw();
-                temp.x[i] = randomX;
-                temp.y[i] = randomY;
-                temp.room = roomId;
-                socket.emit('mountainDewPos', temp);
-            }
-        }else{ 
-                for(var j = 0;j<2;j++){
-                    dew.push(new Square(dewX[j],dewY[j],10,10,"#6fe63a",0)); 
-                    dew[j].draw();
-            }
+        for(var i = 0;i<2;i++){
+        var randomX = random(0,500); 
+        var randomY = random(0,500);
+        dew.push(new Square(randomX,randomY,10,10,"#6fe63a",0)); 
+        dew[i].draw();
+        temp.x[i] = randomX;
+        temp.y[i] = randomY;
+        temp.room = roomId;
+        socket.emit('mountainDewPos', temp);
         }
-   }
-            
-    function Square(x,y,width,height,color,velocity){
-   
+        }else{ 
+        for(var j = 0;j<2;j++){
+        dew.push(new Square(dewX[j],dewY[j],10,10,"#6fe63a",0)); 
+        dew[j].draw();
+        }
+}
+}
+
+function Square(x,y,width,height,color,velocity){
+
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.velocity = velocity;
+    this.color = color;
+    this.isMoving = false;
+    return this;
+
+} 
+
+Square.prototype.draw = function(){
+    ctx.clearRect(this.x,this.y,this.width,this.height);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x,this.y,this.width,this.height);
+};
+
+Square.prototype.collisionDetection = function(){
+    // Collision with DEW
+    for(var i=0;i<dew.length;i++){
+        if(dew[i].x<this.x+this.width && dew[i].x+dew[i].width > this.x && dew[i].y<this.y+this.height && dew[i].y+dew[i].height>this.y){
+            dew[i].erase();
+            dew.splice(i,1);
+            this.velocity += 10;
+            var temp = {};
+            temp.uid = userId;
+            temp.room = roomId;
+            socket.emit('mountainDew',temp);
+            addToScore(5);
+        }
+    }
+
+    // Collision with other squares
+    for(i = 0; i<otherPlayers.length ;i++){
+        console.log(otherPlayers[i]);
+        if(otherPlayers[i].x < this.x + this.width && otherPlayers[i].x + otherPlayers[i].width > this.x && otherPlayers[i].y<this.y + this.height && otherPlayers[i].y + otherPlayers[i].height>this.y){
+            otherPlayers[i].erase();
+            otherPlayers.splice(i,1);
+            score += 1;
+            var temp = {};
+            temp.uid = i;
+            temp.room = roomId;
+            socket.emit('killed',temp);
+            console.log("this "+this.isMoving);
+            console.log(otherPlayers[i].isMoving);
+        }
+    }
+};
+
+
+Square.prototype.erase = function(){
+
+    ctx.clearRect(this.x,this.y,this.width,this.height);
+}; 
+
+Square.prototype.moveUp = function(){
+
+    if(this.y>0){
+        this.collisionDetection();
+        ctx.fillStyle = this.color;
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.y = this.y-this.velocity;
+        ctx.fillRect(this.x,this.y,this.width,this.height);
+        var toSend = this;
+        toSend.dir = "up";
+        socket.emit('move',toSend);
+    } 
+    this.isMoving = false; 
+};
+
+Square.prototype.moveLeft = function(){
+
+    if(this.x>0){
+        this.collisionDetection();
+        ctx.fillStyle = this.color;
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.x = this.x-this.velocity;
+        ctx.fillRect(this.x,this.y,this.width,this.height);
+        var toSend = this;
+        toSend.uid = userId;
+        toSend.dir = "left";
+        socket.emit('move',toSend);
+    } 
+    this.isMoving = false; 
+};
+
+Square.prototype.moveRight = function(){
+
+    if(this.x+this.width<500){
+        this.collisionDetection();
+        ctx.fillStyle = this.color;
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.x = this.x+this.velocity;
+        ctx.fillRect(this.x,this.y,this.width,this.height);
+        var toSend = this;
+        toSend.uid = userId;
+        toSend.dir = "right";
+        socket.emit('move',toSend);
+    }
+    this.isMoving = false; 
+};
+
+Square.prototype.moveDown = function(){
+
+    if(this.y+this.height<500){
+        this.collisionDetection();
+        ctx.fillStyle = this.color;
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.y = this.y+this.velocity;
+        ctx.fillRect(this.x,this.y,this.width,this.height);
+        var toSend = this;
+        toSend.uid = userId;
+        toSend.dir = "down";
+        socket.emit('move',toSend);
+    }
+    this.isMoving = false; 
+};
+
+init();
+
+//
+// keypress
+//
+
+$(document).keypress(function(e){
+        if(alive){
+        // console.log(e.which);
+        //w a s d
+
+        // w or up arrow key
+        if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
+        me.moveUp();
+        me.isMoving = true;
+        }
+
+        //a
+        if(e.which == 97|| e.keyCode == 97){
+
+        me.moveLeft(); 
+        me.isMoving = true;
+        }
+
+        // s
+        if(e.which == 115|| e.keyCode == 115){
+
+            me.moveDown(); 
+            me.isMoving = true;
+        }
+
+        // d
+        if(e.which == 100 || e.keyCode == 100){
+
+            me.moveRight(); 
+            me.isMoving = true;
+        }
+        }
+});
+
+function moveThat(userId, direction){
+    switch(direction){
+
+        case "up":
+            otherPlayers[userId-1].moveUp();
+            break;
+        case "down":
+            otherPlayers[userId-1].moveDown();
+            break;
+        case "left":
+            otherPlayers[userId-1].moveLeft();
+            break;
+        case "right":
+            otherPlayers[userId-1].moveRight();
+            break;
+    }
+}
+
+socket.on('move',function(data){
+        var uid = data.uid;
+        var dir = data.dir;
+        moveThat(uid,dir);
+        });
+
+socket.on('join', function(data){
+        var temp = new Square(data.x,data.y,data.width,data.height,data.color,data.velocity);
+        temp.draw(); 
+        otherPlayers.push(temp);
+        var toSend = {};
+        toSend.otherPlayers = otherPlayers;
+        toSend.room = myRoom;
+        socket.emit('allPlayersSoFar', toSend);    
+        socket.emit('mountainDewPos', temp);
+        });
+
+socket.on('myId', function(id){
+        if(userId === -1){
+        userId = id;
+        me.uid = userId;
+        me.room = roomId;
+        }
+        socket.emit('join',me);
+        if(userId === 0){
+        generateMountainDew();
+        } 
+        });  
+
+socket.on('myRoom', function(myRoom){
+        roomId = myRoom;
+        me.room = roomId;
+        });
+
+socket.on('mountainDewPos', function(data){
+        for(var i = 0;i<2;i++){
+        dewX[i] = data.x[i];
+        dewY[i] = data.y[i]; 
+        }
+        if(userId!==0){
+        generateMountainDew();
+        }
+        });
+
+socket.on('mountainDew', function(data){
+        if(dew.length != 1){
+        otherPlayers[data.uid-1].velocity+=10;
+        }
+        });
+socket.on('killed', function(data){
+        addToScore(10);                 
+        });
+socket.on('allPlayersSoFar', function(data){
+        otherPlayers = data.otherPlayers;
+        for(var i=0;i<otherPlayers.length;i++){
+        otherPlayers[i].draw();
+        }        
+        });
+
+*/
+
+
+    var canvas,ctx;
+    var me;
+    var score,sctx;
+    var info,ictx;
+    var allPlayers;
+    var socket;
+    var userId;
+
+    function init (){
+
+        // Main drawing canvas
+        canvas = document.getElementById('myCanvas');
+        ctx = canvas.getContext('2d');
+
+        // Score display
+        score = document.getElementById('myScore');
+        sctx = score.getContext('2d');
+
+        // Information display
+        info = document.getElementById('myInfo');
+        ictx = info.getContext('2d');
+
+        // Stamina bar display
+        stamina = document.getElementById('myStamina');
+        stctx = stamina.getContext('2d');
+
+        // Create player
+        me = new Player(random(10,440), random(10,440), 40, 40, randomColor());
+
+        // Draw player
+        me.draw();
+
+        drawBorder();
+        drawStamina();
+        setScore(0);
+        getStatus();
+    }
+
+    function setScore(s){
+        sctx.clearRect(10,30,50,50);
+        sctx.fillStyle = randomColor();
+        sctx.font = "40px Georgia";
+        sctx.fillText(s,10,30,50,50);
+    }
+
+    function clearInfo(){
+        ictx.clearRect(0,0,info.width,info.height);
+    }
+
+    function infoText(s,y){
+        ictx.fillStyle = randomColor();
+        ictx.font = "18px Georgia";
+        ictx.fillText(s,10,y,70,70);
+    }
+
+    function getStatus(){
+        clearInfo();
+        infoText("alive : "+me.alive,30);
+        infoText("stuck : "+me.isStuck,60);
+
+    }
+
+    function drawBorder(){ 
+
+        ctx.lineWidth   = 5;
+        ctx.strokeStyle = randomColor();
+        ctx.strokeRect(5,5,490,490);
+
+    }
+
+    function drawStamina(){
+
+        stctx.fillStyle = randomColor();
+        stctx.clearRect(0, 0, stamina.width, stamina.height);
+        stctx.fillRect(0, 0, stamina.width,me.stamina);
+
+    }
+
+
+    function random (low, high){
+
+        return Math.floor(Math.random() * (high - low) + low);
+
+    }
+
+    function randomColor (){
+
+        var color = "#";
+        var toSelectFrom = "0123456789ABCDEF";
+        for(var i = 0; i<6; i++){
+            var j = random(0,16); 
+            color += toSelectFrom[j];
+        }
+        return color;
+
+    }
+
+    function stopMovingFor (time){ 
+        me.isStuck = true;
+        getStatus();
+        setTimeout(function(){
+
+            if(me.stamina <= 0 && me.isStuck){
+                me.stamina = 500;
+            }        
+            me.isStuck = false;  
+            getStatus();
+        }, time);
+
+    }
+
+/*%%%%%%%%%%%%%%%%%%%%
+ *
+ *
+ *  Constructors   
+ *
+ *
+ %%%%%%%%%%%%%%%%%%%%*/
+
+
+    // The square
+    function Player (x, y, width, height, color, name){ 
+
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
-        this.velocity = velocity;
         this.color = color;
+        this.velocity = 15;
+        this.alive = true;
         this.isMoving = false;
-        return this;
-   
-    } 
-   
-    Square.prototype.draw = function(){
-        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.name = name; 
+        this.isStuck = false;
+        this.stamina = 500;
+    }
+
+
+    // Extra speed, points
+    function MountainDew (point,x,y,width,height,color){
+
+        this.x = x;
+        this.y = y;
+        this.width = point * width;
+        this.height = point * height;
+        this.color = color;
+
+    }
+
+    Player.prototype.draw = function (){
+
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x,this.y,this.width,this.height);
-    };
-    
-    Square.prototype.collisionDetection = function(){
-        // Collision with DEW
-        for(var i=0;i<dew.length;i++){
-            if(dew[i].x<this.x+this.width && dew[i].x+dew[i].width > this.x && dew[i].y<this.y+this.height && dew[i].y+dew[i].height>this.y){
-                dew[i].erase();
-                dew.splice(i,1);
-                this.velocity += 10;
-                var temp = {};
-                temp.uid = userId;
-                temp.room = roomId;
-                socket.emit('mountainDew',temp);
-                addToScore(5);
-            }
-        }
 
-        // Collision with other squares
-        for(i = 0; i<otherPlayers.length ;i++){
-            console.log(otherPlayers[i]);
-            if(otherPlayers[i].x < this.x + this.width && otherPlayers[i].x + otherPlayers[i].width > this.x && otherPlayers[i].y<this.y + this.height && otherPlayers[i].y + otherPlayers[i].height>this.y){
-                otherPlayers[i].erase();
-                otherPlayers.splice(i,1);
-                score += 1;
-                var temp = {};
-                temp.uid = i;
-                temp.room = roomId;
-                socket.emit('killed',temp);
-                console.log("this "+this.isMoving);
-                console.log(otherPlayers[i].isMoving);
-            }
-        }
-    };
-      
-     
-    Square.prototype.erase = function(){
-
-        ctx.clearRect(this.x,this.y,this.width,this.height);
-    }; 
-
-    Square.prototype.moveUp = function(){
-
-        if(this.y>0){
-            this.collisionDetection();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.y = this.y-this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.dir = "up";
-            socket.emit('move',toSend);
-        } 
-        this.isMoving = false; 
     };
 
-    Square.prototype.moveLeft = function(){
 
-        if(this.x>0){
-            this.collisionDetection();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.x = this.x-this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "left";
-            socket.emit('move',toSend);
-        } 
-        this.isMoving = false; 
-    };
+    $(document).keypress(function(e){
+        if(me.alive && !me.isStuck){
 
-    Square.prototype.moveRight = function(){
+            // console.log(e.which);
 
-        if(this.x+this.width<500){
-            this.collisionDetection();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.x = this.x+this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "right";
-            socket.emit('move',toSend);
-        }
-        this.isMoving = false; 
-    };
-
-    Square.prototype.moveDown = function(){
-
-        if(this.y+this.height<500){
-            this.collisionDetection();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.y = this.y+this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "down";
-            socket.emit('move',toSend);
-        }
-        this.isMoving = false; 
-    };
-
-     init();
-
-     //
-     // keypress
-     //
-    
-     $(document).keypress(function(e){
-        if(alive){
-           // console.log(e.which);
             //w a s d
 
             // w or up arrow key
+
             if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
                 me.moveUp();
                 me.isMoving = true;
@@ -220,418 +493,144 @@ $(document).ready(function(){
 
             // s
             if(e.which == 115|| e.keyCode == 115){
-     
+
                 me.moveDown(); 
                 me.isMoving = true;
             }
 
             // d
             if(e.which == 100 || e.keyCode == 100){
-                
+
                 me.moveRight(); 
                 me.isMoving = true;
             }
+        }else{
+            if(me.stamina>0){
+
+                stopMovingFor(5000); 
+            }
         }
     });
 
-    function moveThat(userId, direction){
-        switch(direction){
+    Player.prototype.collisionDetection = function(b){
 
-            case "up":
-                otherPlayers[userId-1].moveUp();
-                break;
-            case "down":
-                otherPlayers[userId-1].moveDown();
-                break;
-            case "left":
-                otherPlayers[userId-1].moveLeft();
-                break;
-            case "right":
-                otherPlayers[userId-1].moveRight();
-                break;
-        }
-    }
-
-    socket.on('move',function(data){
-        var uid = data.uid;
-        var dir = data.dir;
-        moveThat(uid,dir);
-    });
-
-    socket.on('join', function(data){
-        var temp = new Square(data.x,data.y,data.width,data.height,data.color,data.velocity);
-        temp.draw(); 
-        otherPlayers.push(temp);
-        var toSend = {};
-        toSend.otherPlayers = otherPlayers;
-        toSend.room = myRoom;
-        socket.emit('allPlayersSoFar', toSend);    
-        socket.emit('mountainDewPos', temp);
-    });
-
-    socket.on('myId', function(id){
-        if(userId === -1){
-            userId = id;
-            me.uid = userId;
-            me.room = roomId;
-        }
-        socket.emit('join',me);
-        if(userId === 0){
-            generateMountainDew();
+        if(b.x < this.x + this.width && b.x + b.width > this.x && b.y < this.y + this.height && b.y + b.height > this.y){
+            alert('collision');
         } 
-    });  
 
-    socket.on('myRoom', function(myRoom){
-        roomId = myRoom;
-        me.room = roomId;
-    });
+    };
 
-    socket.on('mountainDewPos', function(data){
-        for(var i = 0;i<2;i++){
-            dewX[i] = data.x[i];
-            dewY[i] = data.y[i]; 
-        }
-        if(userId!==0){
-            generateMountainDew();
-        }
-    });
+    Player.prototype.moveUp = function(){
 
-    socket.on('mountainDew', function(data){
-        if(dew.length != 1){
-            otherPlayers[data.uid-1].velocity+=10;
-        }
-    });
-    socket.on('killed', function(data){
-        addToScore(10);                 
-    });
-    socket.on('allPlayersSoFar', function(data){
-        otherPlayers = data.otherPlayers;
-        for(var i=0;i<otherPlayers.length;i++){
-            otherPlayers[i].draw();
-        }        
-    });
+        if(!this.isStuck){
 
-*/
-
-
-var canvas,ctx;
-var me;
-var score,sctx;
-var info,ictx;
-var allPlayers;
-var socket;
-var userId;
-
-function init (){
-
-    // Main drawing canvas
-    canvas = document.getElementById('myCanvas');
-    ctx = canvas.getContext('2d');
-    
-    // Score display
-    score = document.getElementById('myScore');
-    sctx = score.getContext('2d');
-
-    // Information display
-    info = document.getElementById('myInfo');
-    ictx = info.getContext('2d');
-    
-    // Stamina bar display
-    stamina = document.getElementById('myStamina');
-    stctx = stamina.getContext('2d');
-    
-    // Create player
-    me = new Player(random(10,440), random(10,440), 40, 40, randomColor());
-
-    // Draw player
-    me.draw();
-
-    drawBorder();
-    drawStamina();
-    setScore(0);
-    getStatus();
-}
-
-function setScore(s){
-    sctx.clearRect(10,30,50,50);
-    sctx.fillStyle = randomColor();
-    sctx.font = "40px Georgia";
-    sctx.fillText(s,10,30,50,50);
-}
-
-function clearInfo(){
-    ictx.clearRect(0,0,info.width,info.height);
-}
-
-function infoText(s,y){
-    ictx.fillStyle = randomColor();
-    ictx.font = "18px Georgia";
-    ictx.fillText(s,10,y,70,70);
-}
-
-function getStatus(){
-    clearInfo();
-    infoText("alive : "+me.alive,30);
-    infoText("stuck : "+me.isStuck,60);
-    
-}
-
-function drawBorder(){ 
-
-    ctx.lineWidth   = 5;
-    ctx.strokeStyle = randomColor();
-    ctx.strokeRect(5,5,490,490);
-
-}
-
-function drawStamina(){
-
-    stctx.fillStyle = randomColor();
-    stctx.clearRect(0, 0, stamina.width, stamina.height);
-    stctx.fillRect(0, 0, stamina.width,me.stamina);
-
-}
-
-
-function random (low, high){
-    
-    return Math.floor(Math.random() * (high - low) + low);
-
-}
-
-function randomColor (){
-
-    var color = "#";
-    var toSelectFrom = "0123456789ABCDEF";
-    for(var i = 0; i<6; i++){
-        var j = random(0,16); 
-        color += toSelectFrom[j];
-    }
-    return color;
-
-}
-
-function stopMovingFor (time){ 
-    me.isStuck = true;
-    setTimeout(function(){
-        
-        if(me.stamina <= 0 && me.isStuck){
-            me.stamina = 500;
-        }        
-        me.isStuck = false;  
-        getStatus();
-    }, time);
-
-}
-
-/*%%%%%%%%%%%%%%%%%%%%
- *
- *
- *  Constructors   
- *
- *
- %%%%%%%%%%%%%%%%%%%%*/
-
-
-// The square
-function Player (x, y, width, height, color, name){ 
- 
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.color = color;
-    this.velocity = 15;
-    this.alive = true;
-    this.isMoving = false;
-    this.name = name; 
-    this.isStuck = false;
-    this.stamina = 500;
-}
-
-
-// Extra speed, points
-function MountainDew (point,x,y,width,height,color){
-    
-    this.x = x;
-    this.y = y;
-    this.width = point * width;
-    this.height = point * height;
-    this.color = color;
-
-}
-
-Player.prototype.draw = function (){
-
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.x,this.y,this.width,this.height);
-
-};
-
-
-$(document).keypress(function(e){
-    if(me.alive && !me.isStuck){
-      
-        // console.log(e.which);
-        
-        //w a s d
-
-        // w or up arrow key
-
-        if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
-            me.moveUp();
-            me.isMoving = true;
-        }
-
-        //a
-        if(e.which == 97|| e.keyCode == 97){
-
-            me.moveLeft(); 
-            me.isMoving = true;
-        }
-
-        // s
-        if(e.which == 115|| e.keyCode == 115){
- 
-            me.moveDown(); 
-            me.isMoving = true;
-        }
-
-        // d
-        if(e.which == 100 || e.keyCode == 100){
-            
-            me.moveRight(); 
-            me.isMoving = true;
-        }
-    }else{
-        if(me.stamina>0){
-
-            getStatus();
-            stopMovingFor(5000); 
-        }
-    }
-});
- 
-Player.prototype.collisionDetection = function(b){
-
-    if(b.x < this.x + this.width && b.x + b.width > this.x && b.y < this.y + this.height && b.y + b.height > this.y){
-        alert('collision');
-    } 
-
-};
-
-Player.prototype.moveUp = function(){
-    
-    if(!this.isStuck){
-   
-        if(this.y>10){
-            //this.collisionDetection();
-            this.decreaseStamina();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.y = this.y-this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.dir = "up";
-            //socket.emit('move',toSend);
-        }
-        else{
+            if(this.y>10){
+                //this.collisionDetection();
+                this.decreaseStamina();
+                ctx.fillStyle = this.color;
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.y = this.y-this.velocity;
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+                var toSend = this;
+                toSend.dir = "up";
+                //socket.emit('move',toSend);
+            }
+            else{
                 this.isStuck = true;
-        }
-    } 
+            }
+        } 
         this.isMoving = false; 
-};
+    };
 
-Player.prototype.moveLeft = function(){
-  
-    if(!this.isStuck){
-  
-        if(this.x>10){
-           // this.collisionDetection();
-            this.decreaseStamina();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.x = this.x-this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "left";
-            //socket.emit('move',toSend);
-        }
-        else{
-                this.isStuck = true;
-        }
-    } 
+    Player.prototype.moveLeft = function(){
 
-        this.isMoving = false; 
-};
+        if(!this.isStuck){
 
-Player.prototype.moveRight = function(){
- 
-    if(!this.isStuck){
- 
-        if(this.x+this.width < 490){
- 
-            //this.collisionDetection();
-            this.decreaseStamina();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.x = this.x+this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "right";
-            //socket.emit('move',toSend);
-        }
-        else{
+            if(this.x>10){
+                // this.collisionDetection();
+                this.decreaseStamina();
+                ctx.fillStyle = this.color;
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.x = this.x-this.velocity;
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+                var toSend = this;
+                toSend.uid = userId;
+                toSend.dir = "left";
+                //socket.emit('move',toSend);
+            }
+            else{
                 this.isStuck = true;
             }
         } 
 
         this.isMoving = false; 
-};
+    };
 
-Player.prototype.moveDown = function(){
+    Player.prototype.moveRight = function(){
 
-    if(!this.isStuck){
+        if(!this.isStuck){
 
-        if(this.y+this.height < 490){
+            if(this.x+this.width < 490){
 
-            //this.collisionDetection();
-            this.decreaseStamina();
-            ctx.fillStyle = this.color;
-            ctx.clearRect(this.x,this.y,this.width,this.height);
-            this.y = this.y+this.velocity;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            var toSend = this;
-            toSend.uid = userId;
-            toSend.dir = "down";
-            //socket.emit('move',toSend);
-        }
-        else{
+                //this.collisionDetection();
+                this.decreaseStamina();
+                ctx.fillStyle = this.color;
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.x = this.x+this.velocity;
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+                var toSend = this;
+                toSend.uid = userId;
+                toSend.dir = "right";
+                //socket.emit('move',toSend);
+            }
+            else{
+                this.isStuck = true;
+            }
+        } 
+
+        this.isMoving = false; 
+    };
+
+    Player.prototype.moveDown = function(){
+
+        if(!this.isStuck){
+
+            if(this.y+this.height < 490){
+
+                //this.collisionDetection();
+                this.decreaseStamina();
+                ctx.fillStyle = this.color;
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.y = this.y+this.velocity;
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+                var toSend = this;
+                toSend.uid = userId;
+                toSend.dir = "down";
+                //socket.emit('move',toSend);
+            }
+            else{
                 this.isStuck = true;
             } 
         }
 
         this.isMoving = false; 
-};
+    };
 
-Player.prototype.decreaseStamina = function(){
- 
-    console.log(this.stamina);
-    if(this.stamina>0){
+    Player.prototype.decreaseStamina = function(){
 
-        this.stamina -= this.velocity;
-        drawStamina();
-    }else{
-            stopMovingFor(2000);
+        if(this.stamina>0){
+
+            this.stamina -= this.velocity;
+            drawStamina();
+        }else{
+            stopMovingFor(2000); 
             drawStamina(); 
-    }
-};
+        }
+    };
 
-init();
+    init();
 
-// socket on events
+    // socket on events
 
 
 });
