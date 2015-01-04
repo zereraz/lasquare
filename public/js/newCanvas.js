@@ -318,19 +318,36 @@ var canvas,ctx;
 var me;
 var score,sctx;
 var info,ictx;
+var allPlayers;
+var socket;
+var userId;
 
 function init (){
 
+    // Main drawing canvas
     canvas = document.getElementById('myCanvas');
     ctx = canvas.getContext('2d');
+    
+    // Score display
     score = document.getElementById('myScore');
     sctx = score.getContext('2d');
+
+    // Information display
     info = document.getElementById('myInfo');
     ictx = info.getContext('2d');
-    var color = randomColor();
-    me = new Player(random(10,440), random(10,440), 40, 40,color);
+    
+    // Stamina bar display
+    stamina = document.getElementById('myStamina');
+    stctx = stamina.getContext('2d');
+    
+    // Create player
+    me = new Player(random(10,440), random(10,440), 40, 40, randomColor());
+
+    // Draw player
     me.draw();
+
     drawBorder();
+    drawStamina();
     setScore(0);
     getStatus();
 }
@@ -367,37 +384,14 @@ function drawBorder(){
 
 }
 
-function Player (x, y, width, height, color, name){ 
- 
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.color = color;
-    this.velocity = 15;
-    this.alive = true;
-    this.isMoving = false;
-    this.name = name; 
-    this.isStuck = false;
+function drawStamina(){
+
+    stctx.fillStyle = randomColor();
+    stctx.clearRect(0, 0, stamina.width, stamina.height);
+    stctx.fillRect(0, 0, stamina.width,me.stamina);
 
 }
 
-function MountainDew (point,x,y,width,height,color){
-    
-    this.x = x;
-    this.y = y;
-    this.width = point * width;
-    this.height = point * height;
-    this.color = color;
-
-}
-
-Player.prototype.draw = function (){
-
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.x,this.y,this.width,this.height);
-
-};
 
 function random (low, high){
     
@@ -416,6 +410,64 @@ function randomColor (){
     return color;
 
 }
+
+function stopMovingFor (time){ 
+    me.isStuck = true;
+    setTimeout(function(){
+        
+        if(me.stamina <= 0 && me.isStuck){
+            me.stamina = 500;
+        }        
+        me.isStuck = false;  
+        getStatus();
+    }, time);
+
+}
+
+/*%%%%%%%%%%%%%%%%%%%%
+ *
+ *
+ *  Constructors   
+ *
+ *
+ %%%%%%%%%%%%%%%%%%%%*/
+
+
+// The square
+function Player (x, y, width, height, color, name){ 
+ 
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.color = color;
+    this.velocity = 15;
+    this.alive = true;
+    this.isMoving = false;
+    this.name = name; 
+    this.isStuck = false;
+    this.stamina = 500;
+}
+
+
+// Extra speed, points
+function MountainDew (point,x,y,width,height,color){
+    
+    this.x = x;
+    this.y = y;
+    this.width = point * width;
+    this.height = point * height;
+    this.color = color;
+
+}
+
+Player.prototype.draw = function (){
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x,this.y,this.width,this.height);
+
+};
+
 
 $(document).keypress(function(e){
     if(me.alive && !me.isStuck){
@@ -452,14 +504,10 @@ $(document).keypress(function(e){
             me.isMoving = true;
         }
     }else{
-        var tempFlag = true;
-        getStatus();
-        if(tempFlag){ 
-            setTimeout(function(){
-                me.isStuck = false;                    
-                getStatus();
-            },5000);
-            tempFlag = false;
+        if(me.stamina>0){
+
+            getStatus();
+            stopMovingFor(5000); 
         }
     }
 });
@@ -473,17 +521,20 @@ Player.prototype.collisionDetection = function(b){
 };
 
 Player.prototype.moveUp = function(){
+    
     if(!this.isStuck){
+   
         if(this.y>10){
             //this.collisionDetection();
+            this.decreaseStamina();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y-this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
-   /*       var toSend = this;
+            var toSend = this;
             toSend.dir = "up";
-            socket.emit('move',toSend);
-    */    }
+            //socket.emit('move',toSend);
+        }
         else{
                 this.isStuck = true;
         }
@@ -492,18 +543,21 @@ Player.prototype.moveUp = function(){
 };
 
 Player.prototype.moveLeft = function(){
+  
     if(!this.isStuck){
+  
         if(this.x>10){
            // this.collisionDetection();
+            this.decreaseStamina();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x-this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
-/*          var toSend = this;
+            var toSend = this;
             toSend.uid = userId;
             toSend.dir = "left";
-            socket.emit('move',toSend);
-  */      }
+            //socket.emit('move',toSend);
+        }
         else{
                 this.isStuck = true;
         }
@@ -513,18 +567,22 @@ Player.prototype.moveLeft = function(){
 };
 
 Player.prototype.moveRight = function(){
+ 
     if(!this.isStuck){
+ 
         if(this.x+this.width < 490){
+ 
             //this.collisionDetection();
+            this.decreaseStamina();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.x = this.x+this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
-   /*       var toSend = this;
+            var toSend = this;
             toSend.uid = userId;
             toSend.dir = "right";
-            socket.emit('move',toSend);
- */       }
+            //socket.emit('move',toSend);
+        }
         else{
                 this.isStuck = true;
             }
@@ -534,18 +592,22 @@ Player.prototype.moveRight = function(){
 };
 
 Player.prototype.moveDown = function(){
+
     if(!this.isStuck){
+
         if(this.y+this.height < 490){
+
             //this.collisionDetection();
+            this.decreaseStamina();
             ctx.fillStyle = this.color;
             ctx.clearRect(this.x,this.y,this.width,this.height);
             this.y = this.y+this.velocity;
             ctx.fillRect(this.x,this.y,this.width,this.height);
-/*          var toSend = this;
+            var toSend = this;
             toSend.uid = userId;
             toSend.dir = "down";
-            socket.emit('move',toSend);
-*/        }
+            //socket.emit('move',toSend);
+        }
         else{
                 this.isStuck = true;
             } 
@@ -554,6 +616,22 @@ Player.prototype.moveDown = function(){
         this.isMoving = false; 
 };
 
+Player.prototype.decreaseStamina = function(){
+ 
+    console.log(this.stamina);
+    if(this.stamina>0){
+
+        this.stamina -= this.velocity;
+        drawStamina();
+    }else{
+            stopMovingFor(2000);
+            drawStamina(); 
+    }
+};
+
 init();
+
+// socket on events
+
 
 });

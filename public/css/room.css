@@ -32,3 +32,11 @@ body{
     left:1%;
     display:block;
 }
+
+#myStamina{
+    border:2px solid #EF4F1D;
+    position:absolute;
+    bottom:50px;
+    left:70%;
+    display:block;
+}

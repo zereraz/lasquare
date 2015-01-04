@@ -68,7 +68,6 @@ app.post('/room',room.pRoom);
 
 io.on('connection', function(socket){
     myRoom = room.getRoom();
-    activeConnections +=1 ;
     if(myRoom!==0){
 
         userName = room.getUser();
@@ -86,21 +85,17 @@ io.on('connection', function(socket){
         io.sockets.to(myRoom).emit('user',userName);        
 
         socket.on('move',function(data){
-            console.log('move '+data);
             socket.broadcast.to(data.room).emit('move',data); 
         });
         socket.on('mountainDewPos',function(data){
-            console.log('mountainDewPos '+data);
             dew.x = data.x;
             dew.y = data.y;            
             socket.broadcast.to(data.room).emit('mountainDewPos',data); 
         });
         socket.on('mountainDew',function(data){
-            console.log('mountainDew '+data);
             socket.broadcast.to(data.room).emit('mountainDew',data); 
         });
         socket.on('join',function(user){
-            console.log('join '+user);
             socket.broadcast.to(user.room).emit('join', user); 
             socket.broadcast.to(user.room).emit('mountainDewPos',dew);
         });
@@ -113,7 +108,6 @@ io.on('connection', function(socket){
         // to subtract for all users
         console.log("User disconnected");
         activeConnections--;
-        console.log(activeConnections);
     });
 });
 
