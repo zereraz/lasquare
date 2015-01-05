@@ -111,7 +111,7 @@ io.on('connection', function(socket){
         });
     */
     }
-    io.sockets.on('disconnect', function(){
+    socket.on('disconnect', function(){
         roomLord[myRoom].users -= 1;
         // to subtract for all users
         console.log("User "+ roomLord[myRoom].users + "disconnected");
