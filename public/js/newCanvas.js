@@ -1,6 +1,6 @@
 $(document).ready(function(){
 
-        /*
+    /*
         //socket object
         var socket; 
         var canvas,ctx,me; 
@@ -323,12 +323,13 @@ socket.on('allPlayersSoFar', function(data){
 
     // Socket object
     var socket;
-    
+
     // this player
     var me; 
     // Contains objects of all players in room
-    var allPlayers;
-    
+    var allPlayers = [];
+    // extra info like sid,id,roomId
+    var allPlayersExtra = [];
     // status : room,id,username
     var status;
 
@@ -360,7 +361,7 @@ socket.on('allPlayersSoFar', function(data){
         drawStamina();
         setScore(0);
         getStatus();
-        
+
     }
 
     function setScore(s){
@@ -376,7 +377,7 @@ socket.on('allPlayersSoFar', function(data){
 
         ictx.clearRect(0,0,info.width,info.height);
     }
-    
+
     // Set info to s at y position
     function infoText(s,y){
 
@@ -432,7 +433,7 @@ socket.on('allPlayersSoFar', function(data){
     function stopMovingFor (time){ 
         me.isStuck = true;
         getStatus();
-        setTimeout(function(){
+        var timeout = setTimeout(function(){
 
             if(me.stamina <= 0 && me.isStuck){
                 me.stamina = 500;
@@ -440,6 +441,7 @@ socket.on('allPlayersSoFar', function(data){
             me.isStuck = false;  
             getStatus();
         }, time);
+        
 
     }
 
@@ -485,7 +487,7 @@ socket.on('allPlayersSoFar', function(data){
         ctx.fillRect(this.x,this.y,this.width,this.height);
 
     };
-    
+
     Player.prototype.clearMe = function (){ 
         ctx.clearRect(this.x,this.y,this.width,this.height);
     };
@@ -607,7 +609,7 @@ socket.on('allPlayersSoFar', function(data){
                 this.draw();
                 this.drawId();
                 var toSend = this;
-//                toSend.uid = userId;
+                //                toSend.uid = userId;
                 toSend.dir = "right";
                 //socket.emit('move',toSend);
             }
@@ -632,7 +634,7 @@ socket.on('allPlayersSoFar', function(data){
                 this.draw();
                 this.drawId();
                 var toSend = this;
-//                toSend.uid = userId;
+                //                toSend.uid = userId;
                 toSend.dir = "down";
                 //socket.emit('move',toSend);
             }
@@ -661,9 +663,49 @@ socket.on('allPlayersSoFar', function(data){
     // socket on events
     socket.on('status', function(data){
         status = data;
+        me.name =status.username;
         me.id = status.id;
         me.drawId();
         $('#stats').html('<h3>room : '+status.room+'</h3><h3> username : '+status.username+'</h3><h3> id : '+status.id+'</h3>');
+        var toSend = me;
+        toSend.room = status.room;
+        toSend.username = status.username;
+        toSend.id = status.id;
+        toSend.sid = status.sid;
+        socket.emit('join',toSend);
     });
 
+
+    // when a user joins
+    // add it to list
+    // draw it
+
+    socket.on('join', function(userData){
+        // I joint before you, nice to meet you. I shall kill you
+        // send my info to the newly joint square 
+        allPlayersExtra[userData.id] = userData;
+        var enemy = new Player(userData.x,userData.y,userData.width,userData.height,userData.color,userData.username);
+        allPlayers[userData.id] = enemy;
+        enemy.id = userData.id;
+        enemy.draw();
+        enemy.drawId();
+        var toSend = me;
+        toSend.room = status.room;
+        toSend.username = status.username;
+        toSend.id = status.id;
+        toSend.sid = status.sid;
+        toSend.socketId = userData.sid;
+        socket.emit('myInfo', toSend);
+ 
+    });
+    
+    socket.on('myInfo', function(enemy){
+        // another player that came before me, my enemy
+        allPlayersExtra[enemy.id] = enemy; 
+        var newEnemy = new Player(enemy.x,enemy.y,enemy.width,enemy.height,enemy.color,enemy.username);
+        allPlayers[enemy.id] = enemy;
+        newEnemy.id = enemy.id;
+        newEnemy.draw();
+        newEnemy.drawId();
+    });
 });

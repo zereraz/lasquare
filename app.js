@@ -71,12 +71,21 @@ io.on('connection', function(socket){
     if(myRoom!==0){
 
         userName = room.getUser();
-
+        // add boolean canjoin to roomLord, that is false
+        // after the room population crosses a threshold
+        // also add a new array called connected
+        // to know which user disconnected find all the active
+        // users and then find ultimately the inactive one 
+        // should be spliced
         if(roomLord[myRoom]===undefined){
-            roomLord[myRoom] = {users:1,userList:[userName]};
+            var idToUser = {};
+            idToUser[socket.id] = userName;
+            roomLord[myRoom] = {users:1,userList:[idToUser]};
         }else{
+            var idToUser = {};
+            idToUser[socket.id] = userName;
             roomLord[myRoom].users += 1;
-            roomLord[myRoom].userList.push(userName);
+            roomLord[myRoom].userList.push(idToUser);
             
         }
         socket.join(myRoom);
@@ -85,9 +94,10 @@ io.on('connection', function(socket){
         var status = {
             "room":myRoom,
             'id':roomLord[myRoom].users,
-            'username':userName
+            'username':userName,
+            'sid':socket.id
         };
-        io.sockets.to(myRoom).emit('status',status);
+        socket.emit('status',status);
 
         socket.on('move',function(data){
             socket.broadcast.to(data.room).emit('move',data); 
@@ -102,18 +112,29 @@ io.on('connection', function(socket){
             socket.broadcast.to(data.room).emit('mountainDew',data); 
         });
 */
-        socket.on('join',function(user){
-            socket.broadcast.to(user.room).emit('join', user); 
+        socket.on('join',function(userInfo){
+            socket.broadcast.to(userInfo.room).emit('join', userInfo); 
 //            socket.broadcast.to(user.room).emit('mountainDewPos',dew);
         });
   /*      socket.on('allPlayersSoFar' , function(data){
             socket.broadcast.to(data.room).emit('allPlayersSoFar',data);
         });
     */
+        socket.on('myInfo', function(userInfo){
+            io.to(userInfo.socketId).emit('myInfo', userInfo);
+        });
     }
     socket.on('disconnect', function(){
+/*        console.log("socket rooms");
+        console.log(socket.rooms);
+        console.log("socket adapter");
+        console.log(io.sockets.adapter.rooms);
+  */
+        console.log(socket.id);
         roomLord[myRoom].users -= 1;
         // to subtract for all users
+//        socket.emit('present?',
+
         console.log("User "+ roomLord[myRoom].users + "disconnected");
     });
 });
