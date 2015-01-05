@@ -40,3 +40,14 @@ body{
     left:70%;
     display:block;
 }
+
+#stats {
+    margin:10px;
+    color:#ccc;
+    text-align:center;
+    width:200px;
+    float:right;
+    word-wrap:break-word;
+    border:2px solid #EF4F1D;
+    padding:20px;
+}

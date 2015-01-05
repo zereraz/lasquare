@@ -314,16 +314,26 @@ socket.on('allPlayersSoFar', function(data){
 */
 
 
+    // Main playing area
     var canvas,ctx;
-    var me;
+    // Score area
     var score,sctx;
+    // information area
     var info,ictx;
-    var allPlayers;
+
+    // Socket object
     var socket;
-    var userId;
+    
+    // this player
+    var me; 
+    // Contains objects of all players in room
+    var allPlayers;
+    
+    // status : room,id,username
+    var status;
 
     function init (){
-
+        socket = io();
         // Main drawing canvas
         canvas = document.getElementById('myCanvas');
         ctx = canvas.getContext('2d');
@@ -350,26 +360,33 @@ socket.on('allPlayersSoFar', function(data){
         drawStamina();
         setScore(0);
         getStatus();
+        
     }
 
     function setScore(s){
+
         sctx.clearRect(10,30,50,50);
         sctx.fillStyle = randomColor();
         sctx.font = "40px Georgia";
         sctx.fillText(s,10,30,50,50);
     }
 
+    // clear info
     function clearInfo(){
+
         ictx.clearRect(0,0,info.width,info.height);
     }
-
+    
+    // Set info to s at y position
     function infoText(s,y){
+
         ictx.fillStyle = randomColor();
         ictx.font = "18px Georgia";
         ictx.fillText(s,10,y,70,70);
     }
-
+    // Refresh info
     function getStatus(){
+
         clearInfo();
         infoText("alive : "+me.alive,30);
         infoText("stuck : "+me.isStuck,60);
@@ -411,6 +428,7 @@ socket.on('allPlayersSoFar', function(data){
 
     }
 
+    // Stop moving for time 
     function stopMovingFor (time){ 
         me.isStuck = true;
         getStatus();
@@ -434,7 +452,7 @@ socket.on('allPlayersSoFar', function(data){
  %%%%%%%%%%%%%%%%%%%%*/
 
 
-    // The square
+    // The square i.e the player
     function Player (x, y, width, height, color, name){ 
 
         this.x = x;
@@ -463,12 +481,20 @@ socket.on('allPlayersSoFar', function(data){
     }
 
     Player.prototype.draw = function (){
-
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x,this.y,this.width,this.height);
 
     };
+    
+    Player.prototype.clearMe = function (){ 
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+    };
 
+    Player.prototype.drawId = function (){
+        ctx.fillStyle = randomColor();
+        ctx.font = "18px Georgia";
+        ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
+    };
 
     $(document).keypress(function(e){
         if(me.alive && !me.isStuck){
@@ -527,10 +553,10 @@ socket.on('allPlayersSoFar', function(data){
             if(this.y>10){
                 //this.collisionDetection();
                 this.decreaseStamina();
-                ctx.fillStyle = this.color;
-                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.clearMe();
                 this.y = this.y-this.velocity;
-                ctx.fillRect(this.x,this.y,this.width,this.height);
+                this.draw();
+                this.drawId();
                 var toSend = this;
                 toSend.dir = "up";
                 //socket.emit('move',toSend);
@@ -549,12 +575,13 @@ socket.on('allPlayersSoFar', function(data){
             if(this.x>10){
                 // this.collisionDetection();
                 this.decreaseStamina();
-                ctx.fillStyle = this.color;
+                this.clearMe();
                 ctx.clearRect(this.x,this.y,this.width,this.height);
                 this.x = this.x-this.velocity;
-                ctx.fillRect(this.x,this.y,this.width,this.height);
+                this.draw();
+                this.drawId();
                 var toSend = this;
-                toSend.uid = userId;
+                //toSend.uid = userId;
                 toSend.dir = "left";
                 //socket.emit('move',toSend);
             }
@@ -574,12 +601,13 @@ socket.on('allPlayersSoFar', function(data){
 
                 //this.collisionDetection();
                 this.decreaseStamina();
-                ctx.fillStyle = this.color;
+                this.clearMe();
                 ctx.clearRect(this.x,this.y,this.width,this.height);
                 this.x = this.x+this.velocity;
-                ctx.fillRect(this.x,this.y,this.width,this.height);
+                this.draw();
+                this.drawId();
                 var toSend = this;
-                toSend.uid = userId;
+//                toSend.uid = userId;
                 toSend.dir = "right";
                 //socket.emit('move',toSend);
             }
@@ -599,12 +627,12 @@ socket.on('allPlayersSoFar', function(data){
 
                 //this.collisionDetection();
                 this.decreaseStamina();
-                ctx.fillStyle = this.color;
-                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.clearMe();
                 this.y = this.y+this.velocity;
-                ctx.fillRect(this.x,this.y,this.width,this.height);
+                this.draw();
+                this.drawId();
                 var toSend = this;
-                toSend.uid = userId;
+//                toSend.uid = userId;
                 toSend.dir = "down";
                 //socket.emit('move',toSend);
             }
@@ -631,6 +659,11 @@ socket.on('allPlayersSoFar', function(data){
     init();
 
     // socket on events
-
+    socket.on('status', function(data){
+        status = data;
+        me.id = status.id;
+        me.drawId();
+        $('#stats').html('<h3>room : '+status.room+'</h3><h3> username : '+status.username+'</h3><h3> id : '+status.id+'</h3>');
+    });
 
 });

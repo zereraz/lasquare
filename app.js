@@ -73,20 +73,26 @@ io.on('connection', function(socket){
         userName = room.getUser();
 
         if(roomLord[myRoom]===undefined){
-            roomLord[myRoom] = 0;
+            roomLord[myRoom] = {users:1,userList:[userName]};
         }else{
-            roomLord[myRoom] += 1;
+            roomLord[myRoom].users += 1;
+            roomLord[myRoom].userList.push(userName);
+            
         }
-
         socket.join(myRoom);
-
-        io.sockets.to(myRoom).emit('myRoom',myRoom);
-        io.sockets.to(myRoom).emit('myId',roomLord[myRoom]); 
-        io.sockets.to(myRoom).emit('user',userName);        
+        
+        // Status of a room
+        var status = {
+            "room":myRoom,
+            'id':roomLord[myRoom].users,
+            'username':userName
+        };
+        io.sockets.to(myRoom).emit('status',status);
 
         socket.on('move',function(data){
             socket.broadcast.to(data.room).emit('move',data); 
         });
+/*
         socket.on('mountainDewPos',function(data){
             dew.x = data.x;
             dew.y = data.y;            
@@ -95,19 +101,20 @@ io.on('connection', function(socket){
         socket.on('mountainDew',function(data){
             socket.broadcast.to(data.room).emit('mountainDew',data); 
         });
+*/
         socket.on('join',function(user){
             socket.broadcast.to(user.room).emit('join', user); 
-            socket.broadcast.to(user.room).emit('mountainDewPos',dew);
+//            socket.broadcast.to(user.room).emit('mountainDewPos',dew);
         });
-        socket.on('allPlayersSoFar' , function(data){
+  /*      socket.on('allPlayersSoFar' , function(data){
             socket.broadcast.to(data.room).emit('allPlayersSoFar',data);
         });
+    */
     }
     io.sockets.on('disconnect', function(){
-        roomLord[myRoom]-=1;
+        roomLord[myRoom].users -= 1;
         // to subtract for all users
-        console.log("User disconnected");
-        activeConnections--;
+        console.log("User "+ roomLord[myRoom].users + "disconnected");
     });
 });
 
