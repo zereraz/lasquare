@@ -444,6 +444,25 @@ socket.on('allPlayersSoFar', function(data){
         
 
     }
+    // on enemy move, show movement
+    function moveThat(userId, direction){
+        console.log(userId);
+        switch(direction){
+
+            case "up":
+                allPlayers[userId].moveUp();
+            break;
+            case "down":
+                allPlayers[userId].moveDown();
+            break;
+            case "left":
+                allPlayers[userId].moveLeft();
+            break;
+            case "right":
+                allPlayers[userId].moveRight();
+            break;
+        }
+    }
 
 /*%%%%%%%%%%%%%%%%%%%%
  *
@@ -493,6 +512,7 @@ socket.on('allPlayersSoFar', function(data){
     };
 
     Player.prototype.drawId = function (){
+        ctx.fillRect(this.x,this.y,this.width,this.height);
         ctx.fillStyle = randomColor();
         ctx.font = "18px Georgia";
         ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
@@ -509,28 +529,24 @@ socket.on('allPlayersSoFar', function(data){
 
             if(e.which == 119|| e.keyCode == 119 || e.which == 38 || e.keyCode == 38){
                 me.moveUp();
-                me.isMoving = true;
             }
 
             //a
             if(e.which == 97|| e.keyCode == 97){
 
                 me.moveLeft(); 
-                me.isMoving = true;
             }
 
             // s
             if(e.which == 115|| e.keyCode == 115){
 
                 me.moveDown(); 
-                me.isMoving = true;
             }
 
             // d
             if(e.which == 100 || e.keyCode == 100){
 
                 me.moveRight(); 
-                me.isMoving = true;
             }
         }else{
             if(me.stamina>0){
@@ -551,7 +567,7 @@ socket.on('allPlayersSoFar', function(data){
     Player.prototype.moveUp = function(){
 
         if(!this.isStuck){
-
+            this.isMoving = true;
             if(this.y>10){
                 //this.collisionDetection();
                 this.decreaseStamina();
@@ -561,7 +577,8 @@ socket.on('allPlayersSoFar', function(data){
                 this.drawId();
                 var toSend = this;
                 toSend.dir = "up";
-                //socket.emit('move',toSend);
+                toSend.uid = status.id;
+                socket.emit('move',toSend);
             }
             else{
                 this.isStuck = true;
@@ -573,6 +590,7 @@ socket.on('allPlayersSoFar', function(data){
     Player.prototype.moveLeft = function(){
 
         if(!this.isStuck){
+            this.isMoving = true;
 
             if(this.x>10){
                 // this.collisionDetection();
@@ -583,9 +601,9 @@ socket.on('allPlayersSoFar', function(data){
                 this.draw();
                 this.drawId();
                 var toSend = this;
-                //toSend.uid = userId;
+                toSend.uid = status.id;
                 toSend.dir = "left";
-                //socket.emit('move',toSend);
+                socket.emit('move',toSend);
             }
             else{
                 this.isStuck = true;
@@ -598,6 +616,7 @@ socket.on('allPlayersSoFar', function(data){
     Player.prototype.moveRight = function(){
 
         if(!this.isStuck){
+            this.isMoving = true;
 
             if(this.x+this.width < 490){
 
@@ -609,9 +628,9 @@ socket.on('allPlayersSoFar', function(data){
                 this.draw();
                 this.drawId();
                 var toSend = this;
-                //                toSend.uid = userId;
+                toSend.uid = status.id;
                 toSend.dir = "right";
-                //socket.emit('move',toSend);
+                socket.emit('move',toSend);
             }
             else{
                 this.isStuck = true;
@@ -624,6 +643,7 @@ socket.on('allPlayersSoFar', function(data){
     Player.prototype.moveDown = function(){
 
         if(!this.isStuck){
+            this.isMoving = true;
 
             if(this.y+this.height < 490){
 
@@ -634,9 +654,9 @@ socket.on('allPlayersSoFar', function(data){
                 this.draw();
                 this.drawId();
                 var toSend = this;
-                //                toSend.uid = userId;
+                toSend.uid = status.id;
                 toSend.dir = "down";
-                //socket.emit('move',toSend);
+                socket.emit('move',toSend);
             }
             else{
                 this.isStuck = true;
@@ -703,9 +723,16 @@ socket.on('allPlayersSoFar', function(data){
         // another player that came before me, my enemy
         allPlayersExtra[enemy.id] = enemy; 
         var newEnemy = new Player(enemy.x,enemy.y,enemy.width,enemy.height,enemy.color,enemy.username);
-        allPlayers[enemy.id] = enemy;
+        allPlayers[enemy.id] = newEnemy;
         newEnemy.id = enemy.id;
         newEnemy.draw();
         newEnemy.drawId();
+    });
+
+
+    socket.on('move',function(data){
+        var uid = data.uid;
+        var dir = data.dir;
+        moveThat(uid,dir);
     });
 });
