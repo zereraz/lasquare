@@ -450,16 +450,16 @@ socket.on('allPlayersSoFar', function(data){
         switch(direction){
 
             case "up":
-                allPlayers[userId].moveUp();
+                allPlayers[userId].moveEnemyUp();
             break;
             case "down":
-                allPlayers[userId].moveDown();
+                allPlayers[userId].moveEnemyDown();
             break;
             case "left":
-                allPlayers[userId].moveLeft();
+                allPlayers[userId].moveEnemyLeft();
             break;
             case "right":
-                allPlayers[userId].moveRight();
+                allPlayers[userId].moveEnemyRight();
             break;
         }
     }
@@ -676,6 +676,59 @@ socket.on('allPlayersSoFar', function(data){
             stopMovingFor(2000); 
             drawStamina(); 
         }
+    };
+
+    Player.prototype.moveEnemyUp = function(){
+
+            if(this.y>10){
+                //this.collisionDetection();
+                this.clearMe();
+                this.y = this.y-this.velocity;
+                this.draw();
+                this.drawId();
+                var toSend = this;
+            }
+    };
+
+    Player.prototype.moveEnemyLeft = function(){
+            if(this.x>10){
+                // this.collisionDetection();
+                this.clearMe();
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.x = this.x-this.velocity;
+                this.draw();
+                this.drawId();
+            }
+
+    };
+
+    Player.prototype.moveEnemyRight = function(){
+
+
+            if(this.x+this.width < 490){
+
+                //this.collisionDetection();
+                this.clearMe();
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.x = this.x+this.velocity;
+                this.draw();
+                this.drawId();
+            }
+    };
+
+    Player.prototype.moveEnemyDown = function(){
+
+            this.isMoving = true;
+
+            if(this.y+this.height < 490){
+
+                //this.collisionDetection();
+                this.clearMe();
+                ctx.clearRect(this.x,this.y,this.width,this.height);
+                this.y = this.y+this.velocity;
+                this.draw();
+                this.drawId();
+            }
     };
 
     init();
