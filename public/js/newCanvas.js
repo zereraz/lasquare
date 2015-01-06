@@ -526,7 +526,7 @@ socket.on('allPlayersSoFar', function(data){
         
         ctx.fillRect(this.x,this.y,this.width,this.height);
         ctx.fillStyle = randomColor();
-        if(alive){
+        if(me.alive){
             ctx.font = "18px Georgia";
             ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
         }else{
