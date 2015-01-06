@@ -328,8 +328,6 @@ socket.on('allPlayersSoFar', function(data){
     var me; 
     // Contains objects of all players in room
     var allPlayers = [];
-    // extra info like sid,id,roomId
-    var allPlayersExtra = [];
     // status : room,id,username
     var status;
 
@@ -441,7 +439,7 @@ socket.on('allPlayersSoFar', function(data){
             me.isStuck = false;  
             getStatus();
         }, time);
-        
+
 
     }
     // on enemy move, show movement
@@ -461,6 +459,19 @@ socket.on('allPlayersSoFar', function(data){
             case "right":
                 allPlayers[userId].moveEnemyRight();
             break;
+        }
+    }
+
+    function checkIfDeadOrAlive(a,b){
+        if(a.isMoving && b.isMoving){
+            // both alive
+            return 1; 
+        }else if(a.isMoving && !b.isMoving){
+            // 'a' is alive 'b' is dead
+            return 0;
+        }else{
+            // 'b' is alive 'a' dead
+            return -1;
         }
     }
 
@@ -512,10 +523,16 @@ socket.on('allPlayersSoFar', function(data){
     };
 
     Player.prototype.drawId = function (){
+        
         ctx.fillRect(this.x,this.y,this.width,this.height);
         ctx.fillStyle = randomColor();
-        ctx.font = "18px Georgia";
-        ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
+        if(alive){
+            ctx.font = "18px Georgia";
+            ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
+        }else{
+            ctx.font = "12px Georgia";
+            ctx.fillText("DEAD",this.x+this.width/4,this.y+this.height/2,this.width,this.height);
+        }
     };
 
     $(document).keypress(function(e){
@@ -557,9 +574,22 @@ socket.on('allPlayersSoFar', function(data){
     });
 
     Player.prototype.collisionDetection = function(b){
-
         if(b.x < this.x + this.width && b.x + b.width > this.x && b.y < this.y + this.height && b.y + b.height > this.y){
-            alert('collision');
+            var result = checkIfDeadOrAlive(this,b);
+            switch(result){
+                case 1:
+                    console.log("Both alive"); 
+                    break;
+                case 0: 
+                    allPlayers.splice(b.id,1);
+                    var toSend = b;
+                    toSend.killedBy = this;      
+                    socket.emit('dead', toSend);
+                    break;
+                case -1:                
+                    me.alive = false;
+                    break;
+            }
         } 
 
     };
@@ -569,41 +599,53 @@ socket.on('allPlayersSoFar', function(data){
         if(!this.isStuck){
             this.isMoving = true;
             if(this.y>10){
-                //this.collisionDetection();
-                this.decreaseStamina();
-                this.clearMe();
-                this.y = this.y-this.velocity;
-                this.draw();
-                this.drawId();
-                var toSend = this;
-                toSend.dir = "up";
-                toSend.uid = status.id;
-                socket.emit('move',toSend);
-            }
-            else{
-                this.isStuck = true;
-            }
-        } 
-        this.isMoving = false; 
-    };
+                if(allPlayers.length>1){
+                        for(var i=0;i<allPlayers.length;i++){
+                            if(allPlayers[i]!==undefined){
+                                this.collisionDetection(allPlayers[i]);
+                            }
+                        }
+                    }
+                    this.decreaseStamina();
+                    this.clearMe();
+                    this.y = this.y-this.velocity;
+                    this.draw();
+                    this.drawId();
+                    var toSend = this;
+                    toSend.dir = "up";
+                    toSend.uid = status.id;
+                    socket.emit('move',toSend);
+                }
+                else{
+                    this.isStuck = true;
+                }
+            } 
+            this.isMoving = false; 
+        };
 
-    Player.prototype.moveLeft = function(){
+        Player.prototype.moveLeft = function(){
 
-        if(!this.isStuck){
-            this.isMoving = true;
+            if(!this.isStuck){
+                this.isMoving = true;
 
-            if(this.x>10){
-                // this.collisionDetection();
-                this.decreaseStamina();
-                this.clearMe();
-                ctx.clearRect(this.x,this.y,this.width,this.height);
-                this.x = this.x-this.velocity;
-                this.draw();
-                this.drawId();
-                var toSend = this;
-                toSend.uid = status.id;
-                toSend.dir = "left";
-                socket.emit('move',toSend);
+                if(this.x>10){
+                    if(allPlayers.length>1){
+                        for(var i=0;i<allPlayers.length;i++){
+                             if(allPlayers[i]!==undefined){
+                                this.collisionDetection(allPlayers[i]);
+                            }
+                        }
+                    }
+                    this.decreaseStamina();
+                    this.clearMe();
+                    ctx.clearRect(this.x,this.y,this.width,this.height);
+                    this.x = this.x-this.velocity;
+                    this.draw();
+                    this.drawId();
+                    var toSend = this;
+                    toSend.uid = status.id;
+                    toSend.dir = "left";
+                    socket.emit('move',toSend);
             }
             else{
                 this.isStuck = true;
@@ -619,8 +661,14 @@ socket.on('allPlayersSoFar', function(data){
             this.isMoving = true;
 
             if(this.x+this.width < 490){
+                if(allPlayers.length>1){
 
-                //this.collisionDetection();
+                    for(var i=0;i<allPlayers.length;i++){
+                            if(allPlayers[i]!==undefined){
+                                this.collisionDetection(allPlayers[i]);
+                            }
+                    }
+                }
                 this.decreaseStamina();
                 this.clearMe();
                 ctx.clearRect(this.x,this.y,this.width,this.height);
@@ -646,8 +694,13 @@ socket.on('allPlayersSoFar', function(data){
             this.isMoving = true;
 
             if(this.y+this.height < 490){
-
-                //this.collisionDetection();
+                if(allPlayers.length>1){
+                    for(var i=0;i<allPlayers.length;i++){
+                            if(allPlayers[i]!==undefined){
+                                this.collisionDetection(allPlayers[i]);
+                            }
+                    }
+                }
                 this.decreaseStamina();
                 this.clearMe();
                 this.y = this.y+this.velocity;
@@ -680,112 +733,123 @@ socket.on('allPlayersSoFar', function(data){
 
     Player.prototype.moveEnemyUp = function(){
 
-            if(this.y>10){
-                //this.collisionDetection();
-                this.clearMe();
-                this.y = this.y-this.velocity;
-                this.draw();
-                this.drawId();
-                var toSend = this;
-            }
+        if(this.y>10){
+            this.isMoving = true; 
+            this.clearMe();
+            this.y = this.y-this.velocity;
+            this.draw();
+            this.drawId();
+            var toSend = this;
+        }
+        this.isMoving = false; 
     };
 
-    Player.prototype.moveEnemyLeft = function(){
-            if(this.x>10){
-                // this.collisionDetection();
-                this.clearMe();
-                ctx.clearRect(this.x,this.y,this.width,this.height);
-                this.x = this.x-this.velocity;
-                this.draw();
-                this.drawId();
-            }
+Player.prototype.moveEnemyLeft = function(){
+   
+    if(this.x>10){
+        this.isMoving = true; 
+        this.clearMe();
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.x = this.x-this.velocity;
+        this.draw();
+        this.drawId();
+    }
+        this.isMoving = false; 
 
-    };
+};
 
-    Player.prototype.moveEnemyRight = function(){
+Player.prototype.moveEnemyRight = function(){
 
+    if(this.x+this.width < 490){
+        this.isMoving = true;
+        this.clearMe();
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.x = this.x+this.velocity;
+        this.draw();
+        this.drawId();
+    }
+        this.isMoving = false; 
+};
 
-            if(this.x+this.width < 490){
+Player.prototype.moveEnemyDown = function(){
 
-                //this.collisionDetection();
-                this.clearMe();
-                ctx.clearRect(this.x,this.y,this.width,this.height);
-                this.x = this.x+this.velocity;
-                this.draw();
-                this.drawId();
-            }
-    };
+    if(this.y+this.height < 490){
+        this.isMoving = true;
+        this.clearMe();
+        ctx.clearRect(this.x,this.y,this.width,this.height);
+        this.y = this.y+this.velocity;
+        this.draw();
+        this.drawId();
+    }
+    this.isMoving = false; 
+};
 
-    Player.prototype.moveEnemyDown = function(){
+init();
 
-            this.isMoving = true;
-
-            if(this.y+this.height < 490){
-
-                //this.collisionDetection();
-                this.clearMe();
-                ctx.clearRect(this.x,this.y,this.width,this.height);
-                this.y = this.y+this.velocity;
-                this.draw();
-                this.drawId();
-            }
-    };
-
-    init();
-
-    // socket on events
-    socket.on('status', function(data){
-        status = data;
-        me.name =status.username;
-        me.id = status.id;
-        me.drawId();
-        $('#stats').html('<h3>room : '+status.room+'</h3><h3> username : '+status.username+'</h3><h3> id : '+status.id+'</h3>');
-        var toSend = me;
-        toSend.room = status.room;
-        toSend.username = status.username;
-        toSend.id = status.id;
-        toSend.sid = status.sid;
-        socket.emit('join',toSend);
-    });
-
-
-    // when a user joins
-    // add it to list
-    // draw it
-
-    socket.on('join', function(userData){
-        // I joint before you, nice to meet you. I shall kill you
-        // send my info to the newly joint square 
-        allPlayersExtra[userData.id] = userData;
-        var enemy = new Player(userData.x,userData.y,userData.width,userData.height,userData.color,userData.username);
-        allPlayers[userData.id] = enemy;
-        enemy.id = userData.id;
-        enemy.draw();
-        enemy.drawId();
-        var toSend = me;
-        toSend.room = status.room;
-        toSend.username = status.username;
-        toSend.id = status.id;
-        toSend.sid = status.sid;
-        toSend.socketId = userData.sid;
-        socket.emit('myInfo', toSend);
- 
-    });
-    
-    socket.on('myInfo', function(enemy){
-        // another player that came before me, my enemy
-        allPlayersExtra[enemy.id] = enemy; 
-        var newEnemy = new Player(enemy.x,enemy.y,enemy.width,enemy.height,enemy.color,enemy.username);
-        allPlayers[enemy.id] = newEnemy;
-        newEnemy.id = enemy.id;
-        newEnemy.draw();
-        newEnemy.drawId();
-    });
-
-
-    socket.on('move',function(data){
-        var uid = data.uid;
-        var dir = data.dir;
-        moveThat(uid,dir);
-    });
+// socket on events
+socket.on('status', function(data){
+    status = data;
+    me.name =status.username;
+    me.id = status.id;
+    me.drawId();
+    $('#stats').html('<h3>room : '+status.room+'</h3><h3> username : '+status.username+'</h3><h3> id : '+status.id+'</h3>');
+    var toSend = me;
+    toSend.room = status.room;
+    toSend.username = status.username;
+    toSend.id = status.id;
+    toSend.sid = status.sid;
+    socket.emit('join',toSend);
 });
+
+
+// when a user joins
+// add it to list
+// draw it
+
+socket.on('join', function(userData){
+    // I joint before you, nice to meet you. I shall kill you
+    // send my info to the newly joint square 
+    var enemy = new Player(userData.x,userData.y,userData.width,userData.height,userData.color,userData.username);
+    enemy.sid = userData.sid;
+    enemy.id = userData.id;
+    enemy.room = userData.room;
+    enemy.username = userData.username;
+    allPlayers[userData.id] = enemy;
+    enemy.draw();
+    enemy.drawId();
+    var toSend = me;
+    toSend.room = status.room;
+    toSend.username = status.username;
+    toSend.id = status.id;
+    toSend.sid = status.sid;
+    toSend.socketId = userData.sid;
+    socket.emit('myInfo', toSend);
+
+});
+
+socket.on('myInfo', function(enemy){
+    // another player that came before me, my enemy
+    var newEnemy = new Player(enemy.x,enemy.y,enemy.width,enemy.height,enemy.color,enemy.username);
+    newEnemy.sid = enemy.sid;
+    newEnemy.id = enemy.id;
+    newEnemy.room = enemy.room;
+    newEnemy.username = enemy.username;
+    allPlayers[enemy.id] = newEnemy;
+    newEnemy.draw();
+    newEnemy.drawId();
+});
+
+
+socket.on('move',function(data){
+    var uid = data.uid;
+    var dir = data.dir;
+    moveThat(uid,dir);
+});
+
+socket.on('gameOver', function(data){
+    me.alive = false;
+    me.drawId();
+});
+
+});
+

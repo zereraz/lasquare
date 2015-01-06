@@ -123,6 +123,11 @@ io.on('connection', function(socket){
         socket.on('myInfo', function(userInfo){
             io.to(userInfo.socketId).emit('myInfo', userInfo);
         });
+        socket.on('dead', function(data){
+            var oneWhoIsDead = data;
+            console.log(data);
+            io.to(oneWhoIsDead.sid).emit('gameOver', data);
+        });
     }
     socket.on('disconnect', function(){
 /*        console.log("socket rooms");
