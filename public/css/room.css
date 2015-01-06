@@ -51,3 +51,8 @@ body{
     border:2px solid #EF4F1D;
     padding:20px;
 }
+
+#newGame{
+    position:absolute;
+    left:8%;
+}

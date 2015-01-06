@@ -582,9 +582,6 @@ socket.on('allPlayersSoFar', function(data){
                     break;
                 case 0: 
                     allPlayers[b.id].clearMe();
-                    allPlayers[b.id].alive = false;
-                    allPlayers[b.id].draw();
-                    allPlayers[b.id].drawId();
                     allPlayers.splice(b.id,1);
                     var toSend = b; 
                     toSend.killedBy = this;
@@ -857,6 +854,21 @@ socket.on('gameOver', function(data){
     alert("you were killed");
     me.draw();
     me.drawId();
+});
+
+// New Game
+
+var newGame = $('#newGame');
+newGame.on('click', function(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    me.alive = true;
+    me.draw();
+    for(var i=0;i<allPlayers.length;i++){
+        if(allPlayers[i]!== undefined){
+            allPlayers[i].draw();
+            allPlayers[i].drawId();
+        }
+    }
 });
 
 });
