@@ -2,6 +2,7 @@
 
 ### online multiplayer game
 
+`lasquare.herokuapp.com`
 
 ### Rules
     * To kill a square you have to be in motion and the other square should not move
