@@ -1,6 +1,8 @@
 extends index
 block content
     div(id="container")
+        div(id="error")
+            h3
         form(method="POST",action="/room")
             input(id="username",class="inp",name="uname",placeholder="  username")
             input(id="room",class="inp",name='roomId',placeholder="  roomId")
