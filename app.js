@@ -125,7 +125,6 @@ io.on('connection', function(socket){
         });
         socket.on('dead', function(data){
             var oneWhoIsDead = data;
-            console.log(data);
             io.to(oneWhoIsDead.sid).emit('gameOver', data);
         });
     }

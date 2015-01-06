@@ -526,12 +526,12 @@ socket.on('allPlayersSoFar', function(data){
         
         ctx.fillRect(this.x,this.y,this.width,this.height);
         ctx.fillStyle = randomColor();
-        if(me.alive){
+        if(this.alive){
             ctx.font = "18px Georgia";
             ctx.fillText(this.id,this.x+this.width/4,this.y+this.height/2,this.width,this.height);
         }else{
             ctx.font = "12px Georgia";
-            ctx.fillText("DEAD",this.x+this.width/4,this.y+this.height/2,this.width,this.height);
+            ctx.fillText("DEAD",this.x+this.width/6,this.y+this.height/2,this.width,this.height);
         }
     };
 
@@ -581,13 +581,19 @@ socket.on('allPlayersSoFar', function(data){
                     console.log("Both alive"); 
                     break;
                 case 0: 
+                    allPlayers[b.id].clearMe();
+                    allPlayers[b.id].alive = false;
+                    allPlayers[b.id].draw();
+                    allPlayers[b.id].drawId();
                     allPlayers.splice(b.id,1);
-                    var toSend = b;
-                    toSend.killedBy = this;      
+                    var toSend = b; 
+                    toSend.killedBy = this;
                     socket.emit('dead', toSend);
                     break;
                 case -1:                
                     me.alive = false;
+                    me.draw(); 
+                    me.drawId();
                     break;
             }
         } 
@@ -848,6 +854,8 @@ socket.on('move',function(data){
 
 socket.on('gameOver', function(data){
     me.alive = false;
+    alert("you were killed");
+    me.draw();
     me.drawId();
 });
 
