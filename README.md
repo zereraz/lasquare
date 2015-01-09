@@ -11,3 +11,5 @@
 ### Info
     * When the stamina is 0 then you are stuck for 2 seconds
     * When you touch boundary then you get stuck for 5 seconds
+### Android app
+`https://github.com/abs192/lasquare-android`
